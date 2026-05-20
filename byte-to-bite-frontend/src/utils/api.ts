@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api`,//points directly to our Express backend server's API route prefix
+  // Uses the environment variable on Vercel, or gracefully falls back to localhost for your laptop
+  baseURL: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -11,13 +12,14 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     let deviceId = localStorage.getItem('byte_to_bite_device_id');
-    
-    // If this is a completely new browser visitor session, generate a unique random identity token
+
+    // If this is a completely new browser visitor session, generate a secure UUID
     if (!deviceId) {
-      deviceId = `web_device_${Math.random().toString(36).substring(2, 11)}`;
+      // Upgrade: Universal, fixed-length, cryptographically secure identifier
+      deviceId = `web_device_${window.crypto.randomUUID()}`;
       localStorage.setItem('byte_to_bite_device_id', deviceId);
     }
-    
+
     config.headers['X-Device-ID'] = deviceId;
   }
   return config;
