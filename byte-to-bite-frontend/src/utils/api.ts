@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'http://localhost:3000/api', // Points directly to your Express backend!
+  baseURL: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api`,//points directly to our Express backend server's API route prefix
   headers: {
     'Content-Type': 'application/json',
   },
