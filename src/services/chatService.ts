@@ -164,7 +164,7 @@ async function handleAwaitingPaymentState(input: string, deviceId: string, sessi
     }
 
     // Fix 1: Keep email string simple and untruncated for logging context
-    const testEmail = `customer_${deviceId}@statebite.com`;
+    const testEmail = `customer_${deviceId}@byte-to-bite.com`;
     
     try {
       // Fix 2: Pass full, untruncated deviceId directly into Paystack's official metadata object channel
