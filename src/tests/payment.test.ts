@@ -1,25 +1,18 @@
 import request from 'supertest';
 import express from 'express';
+import crypto from 'crypto';
 import paymentRoutes from '../routes/paymentRoutes';
 import { Order } from '../models/order';
 
 const mockEmit = jest.fn();
 
-jest.mock('../utils/eventBus', () => {
-  return {
-    __esModule: true,
-    default: {
-      emit: (...args: any[]) => mockEmit(...args),
-      on: jest.fn(),
-      off: jest.fn()
-    }
-  };
-});
+jest.mock('../utils/eventBus', () => ({
+  __esModule: true,
+  default: { emit: (...args: any[]) => mockEmit(...args), on: jest.fn(), off: jest.fn() }
+}));
 
 jest.mock('../models/order', () => ({
-  Order: {
-    findOneAndUpdate: jest.fn()
-  }
+  Order: { findOneAndUpdate: jest.fn() }
 }));
 
 const app = express();
@@ -34,47 +27,50 @@ describe('💳 Backend Paystack Webhook Integration Test Suite', () => {
   });
 
   it('should process a successful charge.success event and emit an internal event', async () => {
-    // A: Match the mock order return value to our clean device ID
     (Order.findOneAndUpdate as jest.Mock).mockResolvedValue({
       _id: 'mock_mongo_id_123',
       deviceId: 'xyz',
       status: 'PAID'
     });
 
-    // B: Use a single-word token token string 'xyz' so the split('_')[1] calculation works smoothly!
+    // Match the clean structural metadata definition we just built!
     const mockPaystackWebhook = {
       event: 'charge.success',
       data: {
-        customer: { 
-          email: 'customer_xyz@byte-to-bite.com' 
+        metadata: {
+          deviceId: 'xyz'
         }
       }
     };
 
+    // Generate a valid mock signature using our test environment fallback key string
+    const mockSecret = process.env.PAYSTACK_SECRET_KEY || '';
+    const validTestSignature = crypto
+      .createHmac('sha512', mockSecret)
+      .update(JSON.stringify(mockPaystackWebhook))
+      .digest('hex');
+
     const response = await request(app)
       .post('/webhook')
+      .set('x-paystack-signature', validTestSignature) // Injects the verification header token
       .send(mockPaystackWebhook);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ status: 'success' });
     
-    // C: Assert against the exact clean token parameter emitted by your controller
     expect(mockEmit).toHaveBeenCalledWith('payment:success', {
       deviceId: 'xyz'
     });
   });
 
-  it('should return 200 but ignore events that are not charge.success', async () => {
-    const minorWebhookEvent = {
-      event: 'transfer.reversed',
-      data: {}
-    };
-
+  it('should reject requests with an invalid signature', async () => {
     const response = await request(app)
       .post('/webhook')
-      .send(minorWebhookEvent);
+      .set('x-paystack-signature', 'fake_malicious_signature_hash')
+      .send({ event: 'charge.success', data: {} });
 
-    expect(response.status).toBe(200);
+    // Expecting an unauthorized block status code
+    expect(response.status).toBe(401);
     expect(mockEmit).not.toHaveBeenCalled();
   });
 });

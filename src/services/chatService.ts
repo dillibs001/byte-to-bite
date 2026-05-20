@@ -99,10 +99,16 @@ async function handleChoosingMenuState(input: string, deviceId: string, session:
   }
 
   if (input === '99') {
+    const checkoutCart = await Order.findOne({ deviceId, status: 'PENDING' });
+    
+    // Fix: Guard boundary gate check to prevent entering payment state with an empty cart
+    if (!checkoutCart || checkoutCart.items.length === 0) {
+      return `❌ Your cart is currently empty. Please select a meal option number first before checking out.`;
+    }
+
     session.currentState = 'AWAITING_PAYMENT';
     await session.save();
-    const checkoutCart = await Order.findOne({ deviceId, status: 'PENDING' });
-    return `💳 Ready to check out. Total is ₦${checkoutCart?.totalAmount.toLocaleString()}.\n\nReply with **PAY** to generate your secure link.`;
+    return `💳 Ready to check out. Total is ₦${checkoutCart.totalAmount.toLocaleString()}.\n\nReply with **PAY** to generate your secure link.`;
   }
 
   const matchedProduct = await Product.findOne({ numberId: parseInt(input) });
@@ -157,10 +163,17 @@ async function handleAwaitingPaymentState(input: string, deviceId: string, sessi
       return `❌ Your cart expired or was cleared. Returning to main menu.\n\n${MAIN_MENU}`;
     }
 
-    const testEmail = `customer_${deviceId.slice(-6)}@statebite.com`;
+    // Fix 1: Keep email string simple and untruncated for logging context
+    const testEmail = `customer_${deviceId}@statebite.com`;
     
     try {
-      const paymentData = await initializePaystackPayment(testEmail, activeOrder.totalAmount);
+      // Fix 2: Pass full, untruncated deviceId directly into Paystack's official metadata object channel
+      const paymentData = await initializePaystackPayment(
+        testEmail, 
+        activeOrder.totalAmount, 
+        { metadata: { deviceId } }
+      );
+      
       return `💳 **SECURE PAYMENT GENERATED** 💳\n\n` +
              `Your total bill is ₦${activeOrder.totalAmount.toLocaleString()}.\n\n` +
              `👉 Click here to complete your transaction securely:\n${paymentData.authorization_url}\n\n` +

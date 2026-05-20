@@ -1,21 +1,32 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto'; // Native Node.js crypto tool
 import { Order } from '../models/order';
 import eventBus from '../utils/eventBus'; 
 
 export const verifyPaystackWebhook = async (req: Request, res: Response) => {
   try {
-    // Paystack sends the transaction details inside req.body
+    // 1. 🔒 Webhook Forgery Protection: Validate Paystack Signature
+    const paystackHeaderSignature = req.headers['x-paystack-signature'];
+    
+    const calculatedHmacHash = crypto
+      .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY || '')
+      .update(JSON.stringify(req.body))
+      .digest('hex');
+
+    // If the hashes don't match, somebody is trying to spoof a free order!
+    if (calculatedHmacHash !== paystackHeaderSignature) {
+      console.warn('⚠️ SECURITY WARNING: Blocked an unauthorized webhook forgery attempt!');
+      return res.status(401).json({ error: 'Unauthorized payload signature mapping failed' });
+    }
+
     const { event, data } = req.body;
 
-    // We only care if the customer actually completed the payment successfully
     if (event === 'charge.success') {
-      const userEmail = data.customer.email; // e.g., customer_v_123@statebite.com
-      
-      // Extract the original deviceId we hid inside the custom email string
-      const deviceId = userEmail.split('_')[1]?.split('@')[0];
+      // 2. 🎯 Read the full, untruncated device ID directly from the custom metadata object block
+      const deviceId = data.metadata?.deviceId;
 
       if (deviceId) {
-        // 1. Find their pending order and flip its status flag to PAID
+        // Find their pending order and flip its status flag to PAID
         const order = await Order.findOneAndUpdate(
           { deviceId, status: 'PENDING' },
           { status: 'PAID' },
@@ -23,15 +34,13 @@ export const verifyPaystackWebhook = async (req: Request, res: Response) => {
         );
 
         if (order) {
-          console.log(`💰 SUCCESS: Order ${order._id} has been fully funded via Paystack!`);
-          
-          // 🔥 2. Instead of editing the Session directly, we broadcast an announcement!
+          console.log(`💰 SECURE SUCCESS: Verified Paystack Order ${order._id} has been fully funded!`);
           eventBus.emit('payment:success', { deviceId });
         }
       }
     }
 
-    // Always tell Paystack you received their event with a clean 200 OK
+    // Always let Paystack know the event was processed securely
     return res.status(200).json({ status: 'success' });
 
   } catch (error) {

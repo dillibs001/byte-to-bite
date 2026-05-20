@@ -1,9 +1,4 @@
 import axios from 'axios';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
 interface PaystackInitResponse {
   status: boolean;
@@ -15,7 +10,11 @@ interface PaystackInitResponse {
   };
 }
 
-export const initializePaystackPayment = async (email: string, amountInNaira: string | number) => {
+export const initializePaystackPayment = async (
+  email: string, 
+  amountInNaira: number,
+  extraData?: Record<string, any> // 1. 🔥 Allow an optional 3rd argument for custom metadata/options
+) => {
   try {
     // Paystack expects amount in Kobo (Multiply Naira by 100)
     const amountInKobo = Math.round(Number(amountInNaira) * 100);
@@ -25,22 +24,21 @@ export const initializePaystackPayment = async (email: string, amountInNaira: st
       {
         email,
         amount: amountInKobo,
-        callback_url: 'http://localhost:5000/api/payments/verify' 
+        // 2. 🌐 Fix callback URL to pull from env for production, fallback to local webhook
+        callback_url: process.env.PAYSTACK_CALLBACK_URL || 'http://localhost:3000/webhook',
+        ...extraData // 3. 🔥 Spread the extra data object (unpacks { metadata: { deviceId } } into the body)
       },
       {
         headers: {
-          Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
           'Content-Type': 'application/json'
         }
       }
     );
 
-    if (response.data.status) {
-      return response.data.data;
-    }
-    throw new Error(response.data.message);
+    return response.data.data;
   } catch (error: any) {
-    console.error('Paystack SDK Initialization Error:', error.response?.data || error.message);
-    throw new Error('Could not generate Paystack checkout node link.');
+    console.error('Paystack initialization network failure:', error.response?.data || error.message);
+    throw error;
   }
 };
