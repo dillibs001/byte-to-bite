@@ -19,17 +19,27 @@ eventBus.on('payment:success', async (data) => {
 });
 
 
+
+
 // MAIN ROUTER ENTRY POINT 
 
 export const handleChatMessage = async (req: Request, res: Response) => {
   try {
-    // 1. Unpack network payload
-    const { message, deviceId } = req.body;
+    // 1. Unpack network payload 
+    const { message } = req.body; 
     const input = message?.trim();
 
-    // 2. Validate input format
+    // Read the device ID from headers where the frontend actually sent it!
+    const deviceId = req.headers['x-device-id'] as string;
+
+    // 2. Validate input and tracking data format
     if (!input) {
       return res.status(400).json({ reply: "Please type a valid option." });
+    }
+
+    if (!deviceId) {
+      console.error("⚠️ Incoming request dropped: Missing x-device-id header");
+      return res.status(400).json({ error: "Missing identity tracking token." });
     }
 
     // 3. Delegate ALL heavy lifting to the pure Service logic layer
