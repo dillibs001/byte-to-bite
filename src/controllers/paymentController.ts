@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Order } from '../models/order';
-import { Session } from '../models/session';
+import eventBus from '../utils/eventBus'; 
 
 export const verifyPaystackWebhook = async (req: Request, res: Response) => {
   try {
@@ -25,11 +25,8 @@ export const verifyPaystackWebhook = async (req: Request, res: Response) => {
         if (order) {
           console.log(`💰 SUCCESS: Order ${order._id} has been fully funded via Paystack!`);
           
-          // 2. Reset their chatbot session state back to IDLE so they can order again
-          await Session.findOneAndUpdate(
-            { deviceId },
-            { currentState: 'IDLE', currentOrderId: null }
-          );
+          // 🔥 2. Instead of editing the Session directly, we broadcast an announcement!
+          eventBus.emit('payment:success', { deviceId });
         }
       }
     }
