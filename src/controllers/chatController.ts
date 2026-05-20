@@ -202,7 +202,7 @@ async function handleAwaitingPaymentState(input: string, deviceId: string, sessi
     try {
       const paymentData = await initializePaystackPayment(testEmail, activeOrder.totalAmount);
       
-      console.log("🎁 PAYSTACK API RESPONSE DATA:", paymentData);
+      console.log("🎁 PAYSTACK API RESPONSE DATA:", paymentData.authorization_url);
       
       return res.json({
         reply: `💳 **SECURE PAYMENT GENERATED** 💳\n\n` +

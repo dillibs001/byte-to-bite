@@ -9,9 +9,14 @@ import paymentRoutes from './routes/paymentRoutes';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT
 
-app.use(cors());
+
+app.use(cors({
+  origin: 'http://localhost:3001', // Explicitly allow your Next.js app to talk to the API!
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-ID'], // Allow our custom device tracking header!
+}));
 app.use(express.json());
 app.use('/api/payments', paymentRoutes);
 
