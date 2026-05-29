@@ -18,3 +18,4 @@ const SessionSchema = new Schema<ISession>({
 });
 
 export const Session = model<ISession>('Session', SessionSchema);
+

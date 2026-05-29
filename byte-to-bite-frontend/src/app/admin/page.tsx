@@ -1,6 +1,6 @@
-'use client';
+'use client'; 
 
-import { useState } from 'react';
+import { useState } from 'react'; 
 import axios from 'axios';
 
 // TypeScript interface so our code knows what a 'meal' looks like

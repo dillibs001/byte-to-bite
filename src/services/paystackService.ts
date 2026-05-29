@@ -10,6 +10,7 @@ interface PaystackInitResponse {
   };
 }
 
+
 export const initializePaystackPayment = async (
   email: string, 
   amountInNaira: number,
@@ -35,10 +36,19 @@ export const initializePaystackPayment = async (
         }
       }
     );
+    
+// 1. 🎁 Catch the entire response data block inside a single variable
+    const initializedData = response.data.data;
 
-    return response.data.data;
+    // 2. 🎯 Console.log that variable to inspect it in your terminal
+    console.log('🔍 PAYSTACK INITIALIZED RESPONSE VARIABLE:', initializedData);
+
+    // 3. 🚀 Return the variable so your payment service controller gets the routing URL
+    return initializedData;
+    
   } catch (error: any) {
     console.error('Paystack initialization network failure:', error.response?.data || error.message);
     throw error;
   }
 };
+

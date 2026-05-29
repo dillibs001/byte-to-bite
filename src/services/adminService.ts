@@ -23,7 +23,6 @@ export const getAllMeals = async () => {
   return meals;
 };
 
-
 // 3. UPDATE (Modify an existing meal's name or price)
 
 export const updateMeal = async (numberId: number, name?: string, price?: number) => {
@@ -35,7 +34,7 @@ export const updateMeal = async (numberId: number, name?: string, price?: number
   const updatedMeal = await Product.findOneAndUpdate(
     { numberId },
     { $set: updateData },
-    { new: true } // 🔥 This crucial flag tells Mongoose to return the NEW updated document, not the old one
+    { new: true } // This flag tells Mongoose to return the NEW updated document, not the old one
   );
 
   if (!updatedMeal) {
@@ -47,7 +46,6 @@ export const updateMeal = async (numberId: number, name?: string, price?: number
 
 
 // 4. DELETE (Remove a meal completely)
-
 export const deleteMeal = async (numberId: number) => {
   const deletedMeal = await Product.findOneAndDelete({ numberId });
   

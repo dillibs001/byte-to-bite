@@ -1,6 +1,6 @@
 'use client';
 
-import { useChat } from '../hooks/useChat';
+import { useChat } from '../hooks/useChat'; // Ensure this matches your file structure
 import { useRef, useEffect } from 'react';
 
 export default function Home() {
@@ -11,33 +11,6 @@ export default function Home() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
-
-  const renderMessageContent = (text: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = text.split(urlRegex);
-
-    return parts.map((part, index) => {
-      if (part.match(urlRegex)) {
-        return (
-          <a
-            key={index}
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 block text-center bg-linear-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold py-3 px-5 rounded-2xl transition-all duration-300 shadow-lg shadow-emerald-950/40 hover:shadow-emerald-500/20 transform active:scale-[0.98] animate-pulse tracking-wide uppercase text-xs"
-          >
-            💳 Proceed to Secure Payment
-          </a>
-        );
-      }
-      
-      return (
-        <span key={index} className="whitespace-pre-line leading-relaxed">
-          {part.replace(/\*\*(.*?)\*\*/g, '$1')}
-        </span>
-      );
-    });
-  };
 
   return (
     <main className="flex h-screen w-screen flex-col bg-slate-950 text-slate-100 antialiased font-sans">
@@ -74,7 +47,22 @@ export default function Home() {
                   : 'bg-slate-900 text-slate-200 border-slate-800/80 rounded-tl-none shadow-slate-950/50'
               }`}
             >
-              {renderMessageContent(msg.text)}
+              {/* 1. Standard text rendering (keeps your markdown bold formatting) */}
+              <span className="whitespace-pre-line leading-relaxed">
+                {msg.text.replace(/\*\*(.*?)\*\*/g, '$1')}
+              </span>
+
+              {/* 2. 🆕 THE NEW UI COMPONENT: Uses your exact Tailwind classes! */}
+              {msg.link && (
+                <a
+                  href={msg.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 block text-center bg-linear-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold py-3 px-5 rounded-2xl transition-all duration-300 shadow-lg shadow-emerald-950/40 hover:shadow-emerald-500/20 transform active:scale-[0.98] animate-pulse tracking-wide uppercase text-xs"
+                >
+                  💳 Proceed to Secure Payment
+                </a>
+              )}
             </div>
           </div>
         ))}

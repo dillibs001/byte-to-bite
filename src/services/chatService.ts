@@ -58,6 +58,7 @@ async function handleIdleState(input: string, deviceId: string, session: any): P
       cartText += `\n💰 **Total Amount:** ₦${currentOrder.totalAmount.toLocaleString()}\n\nReply 99 to checkout or 0 to clear.`;
       return cartText;
 
+
     case '98': 
       const pastOrders = await Order.find({ deviceId, status: { $ne: 'PENDING' } }).sort({ createdAt: -1 });
       if (pastOrders.length === 0) {
@@ -185,6 +186,6 @@ async function handleAwaitingPaymentState(input: string, deviceId: string, sessi
   }
 
   const pendingCart = await Order.findOne({ deviceId, status: 'PENDING' });
-  const displayTotal = pendingCart ? pendingCart.totalAmount.toLocaleString() : "0";
+  const displayTotal = pendingCart ? pendingCart.totalAmount.toLocaleString() : "0"; 
   return `⚠️ You have an unpaid order pending. Total is ₦${displayTotal}.\n\nType **PAY** to generate your invoice link, or **0** to cancel.`;
 }

@@ -1,26 +1,25 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto'; // Native Node.js crypto tool
-import { Order } from '../models/order';
-import eventBus from '../utils/eventBus'; 
+import { Order } from '../models/order'; // Mongoose model for orders
+import eventBus from '../utils/eventBus'; // Centralized event emitter for decoupled communication across the app
 
 export const verifyPaystackWebhook = async (req: Request, res: Response) => {
   try {
     // 1. 🔒 Webhook Forgery Protection: Validate Paystack Signature
     const paystackHeaderSignature = req.headers['x-paystack-signature'];
-    
+
     const calculatedHmacHash = crypto
       .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY || '')
       .update(JSON.stringify(req.body))
       .digest('hex');
-
     // If the hashes don't match, somebody is trying to spoof a free order!
     if (calculatedHmacHash !== paystackHeaderSignature) {
       console.warn('⚠️ SECURITY WARNING: Blocked an unauthorized webhook forgery attempt!');
       return res.status(401).json({ error: 'Unauthorized payload signature mapping failed' });
     }
-
+    
     const { event, data } = req.body;
-
+console.log('📬 INCOMING PAYSTACK WEBHOOK VARIABLE:', JSON.stringify(req.body, null, 2));
     if (event === 'charge.success') {
       // 2. 🎯 Read the full, untruncated device ID directly from the custom metadata object block
       const deviceId = data.metadata?.deviceId;
@@ -40,6 +39,8 @@ export const verifyPaystackWebhook = async (req: Request, res: Response) => {
       }
     }
 
+
+
     // Always let Paystack know the event was processed securely
     return res.status(200).json({ status: 'success' });
 
@@ -48,3 +49,23 @@ export const verifyPaystackWebhook = async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Internal Webhook Error' });
   }
 };
+
+
+export const checkOrderStatus = async (req:Request, res:Response) =>{
+  try{
+    const deviceId = req.params.deviceId;
+    const latestOrder = await Order.findOne({deviceId}).sort({ createdAt: -1 }); // Get the most recent order for this device
+
+    if(!latestOrder){
+      return res.status(404).json({ paid:false, message: 'Order not found' });
+    }
+    
+    //return true if the webhook has marked the order as PAID
+    return res.status(200).json({ paid: latestOrder.status === 'PAID', status: latestOrder.status });
+
+
+  } catch (error) {
+    console.error('Error checking order status:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+}

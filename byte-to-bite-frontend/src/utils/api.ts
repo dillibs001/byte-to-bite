@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const apiClient = axios.create({
   // Uses the environment variable on Vercel, or gracefully falls back to localhost for your laptop
-  baseURL: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api`,
+  baseURL: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api`, //
   headers: {
     'Content-Type': 'application/json',
   },
